@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Smart Summarizer — PDF Parser</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/a2d04c7325.js" crossorigin="anonymous"></script>
+
+  <style>
+   
+    body {
+  background: linear-gradient(to right, #d0d8e8, #d8cfea);
+  color: #000;
+  margin: 0;
+  padding-top: 70px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Navbar */
+.navbar {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  padding: 12px 0;
+}
+
+.navbar-brand,
+.nav-link {
+  color: #000 !important;
+  font-weight: 700;
+}
+
+/* Layout */
+.main-flex {
+  display: flex;
+  gap: 40px;
+  margin-top: 40px;
+  padding: 24px 16px;
+  height: calc(100vh - 120px);
+}
+
+/* Left panel */
+.left-box {
+  flex: 1;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.left-box h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: #000;
+}
+
+.left-box p,
+.muted {
+  color: rgba(0, 0, 0, 0.8);
+  font-size: 1.05rem;
+}
+
+/* Right panel */
+.right-box {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+/* Glass effect card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  color: #000;
+}
+
+/* Form inputs */
+input,
+select,
+textarea,
+.form-control,
+.form-select {
+  border-radius: 12px;
+  border: 1px solid #888;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #000;
+}
+
+input::file-selector-button {
+  background: rgba(0, 0, 0, 0.15);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: #000;
+  cursor: pointer;
+}
+
+/* Buttons */
+button,
+.btn {
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  color: #000;
+}
+
+/* Summary/Answer box */
+.summary-box {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 14px;
+  border-radius: 12px;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  color: #000;
+  border: 1px solid #999;
+}
+
+/* Alerts */
+.alert {
+  border-radius: 12px;
+  font-weight: 600;
+  color: #000 !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main-flex {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .right-box {
+    padding: 0;
+  }
+}
+
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar fixed-top">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand" href="/">🧠 AI Smart Summarizer</a>
+    <div>
+      <a class="nav-link me-3" href="/">Summarizer</a>
+      <a class="nav-link" href="/pdf_parser"><i class="fa-solid fa-file-pdf"></i> PDF Parser</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="main-flex">
+
+    <!-- LEFT DESCRIPTION (matches index style) -->
+    <div class="left-box">
+      <h2><i class="fa-solid fa-file-pdf"></i> PDF Parser & Q&A</h2>
+      <p class="muted">Upload PDFs, parse their text instantly, then ask focused questions using a lightweight Q&A interface.</p>
+
+      <ul class="mt-3 muted">
+        <li>Instant upload & parse</li>
+        <li>Ask unlimited questions during the session</li>
+      </ul>
+    </div>
+
+    <!-- RIGHT: Parser Card (keeps same controls as your AJAX page) -->
+    <div class="right-box">
+      <div class="glass-card">
+
+        <h4 class="mb-3">Upload & Parse PDF</h4>
+
+        <div class="mb-3">
+          <label class="form-label">Choose PDF (will upload & parse automatically):</label>
+          <input id="pdfInput" type="file" accept="application/pdf" class="form-control" />
+        </div>
+
+        <div class="row g-2 align-items-center mb-3">
+          <div class="col-md-7">
+            <select id="modelSelect" class="form-select">
+              <option value="llama-3.1-8b-instant">LLaMA 3.1 (8B Instant)</option>
+              <option value="llama-3.1-70b">LLaMA 3.1 (70B)</option>
+            </select>
+          </div>
+          <div class="col-md-5 text-end">
+            <button id="clearBtn" class="btn btn-outline-light btn-sm">🗑️ Clear PDF</button>
+          </div>
+        </div>
+
+        <div id="statusArea" class="mb-3"></div>
+
+        <!-- Q&A area -->
+        <div id="qaArea" style="display:none;">
+          <div class="mb-2 d-flex gap-2">
+            <input id="questionInput" type="text" placeholder="Ask a question about the PDF..." class="form-control" />
+            <button id="askBtn" class="btn btn-warning">Ask</button>
+          </div>
+
+          <div id="answers" class="mt-3"></div>
+        </div>
+
+        <div class="text-center mt-4">
+          <a href="/" class="btn btn-outline-light"><i class="fa-solid fa-arrow-left"></i> Back to Summarizer</a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Helper UI functions (same semantics as previous page)
+  function showStatus(message, type = "info") {
+    const area = document.getElementById("statusArea");
+    const cls = type === "error" ? "alert-danger" : type === "success" ? "alert-success" : "alert-info";
+    area.innerHTML = `<div class="alert ${cls} text-dark rounded-3">${message}</div>`;
+  }
+
+  function showParsedUI(show, pdfLength = null) {
+    const qa = document.getElementById("qaArea");
+    qa.style.display = show ? "block" : "none";
+    if (show && pdfLength !== null) {
+      showStatus(`✅ Parsed PDF loaded — ${pdfLength} pages.`, "success");
+    }
+    if (!show) {
+      showStatus("No PDF loaded. Choose a file to upload & parse.", "info");
+      document.getElementById("answers").innerHTML = "";
+    }
+  }
+
+  // Upload on selection (AJAX)
+  const pdfInput = document.getElementById("pdfInput");
+  pdfInput.addEventListener("change", async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { showStatus("Please select a PDF file.", "error"); return; }
+
+    showStatus("Uploading and parsing PDF...");
+    const form = new FormData(); form.append("uploaded_pdf", file);
+
+    try {
+      const resp = await fetch("/pdf_parser/upload", { method: "POST", body: form });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        showStatus("Error uploading/parsing PDF: " + (data?.message || data?.error || resp.statusText), "error");
+        showParsedUI(false);
+        return;
+      }
+      showParsedUI(true, data.pdf_length);
+    } catch (err) {
+      console.error(err);
+      showStatus("Network error while uploading PDF.", "error");
+      showParsedUI(false);
+    }
+  });
+
+  // Ask question (AJAX)
+  const askBtn = document.getElementById("askBtn");
+  askBtn.addEventListener("click", async () => {
+    const question = document.getElementById("questionInput").value.trim();
+    const model = document.getElementById("modelSelect").value;
+    if (!question) { showStatus("Please type a question first.", "error"); return; }
+    showStatus("Thinking...");
+    try {
+      const resp = await fetch("/pdf_parser/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, model })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) { showStatus("Error: " + (data?.message || data?.error || resp.statusText), "error"); return; }
+
+      const answers = document.getElementById("answers");
+      const card = document.createElement("div");
+      card.className = "summary-box";
+      card.innerHTML = `<strong>Q:</strong> ${escapeHtml(question)}<br/><hr/><strong>A:</strong> ${escapeHtml(data.answer)}`;
+      answers.prepend(card);
+      showStatus("Answer received.", "success");
+      document.getElementById("questionInput").value = "";
+
+    } catch (err) {
+      console.error(err);
+      showStatus("Network or server error while asking question.", "error");
+    }
+  });
+
+  // Clear session
+  const clearBtn = document.getElementById("clearBtn");
+  clearBtn.addEventListener("click", async () => {
+    try {
+      const resp = await fetch("/pdf_parser/clear", { method: "POST" });
+      const data = await resp.json();
+      if (resp.ok && data.ok) {
+        pdfInput.value = ""; showParsedUI(false);
+      } else { showStatus("Could not clear PDF from session.", "error"); }
+    } catch (err) { console.error(err); showStatus("Network error while clearing PDF.", "error"); }
+  });
+
+  // helper to escape HTML
+  function escapeHtml(unsafe) {
+    return unsafe
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // on load: read server-side flags rendered by Jinja
+  (function init() {
+    const parsed = {{ 'true' if parsed else 'false' }};
+    const pdfLength = {{ pdf_length if pdf_length else 'null' }};
+    if (parsed) showParsedUI(true, pdfLength); else showParsedUI(false);
+  })();
+</script>
+
+</body>
+</html>
